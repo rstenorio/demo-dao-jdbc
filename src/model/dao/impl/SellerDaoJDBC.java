@@ -96,8 +96,40 @@ public class SellerDaoJDBC implements SellerDao {
 
 	@Override
 	public List<Seller> findAll() {
-		// TODO Auto-generated method stub
-		return null;
+		PreparedStatement st = null;
+		ResultSet rs = null;
+
+		try {
+			String sql = "select seller.*, department.name as DepName from seller inner join department "
+					+ "on seller.DepartmentId = department.Id ";
+
+			st = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+			rs = st.executeQuery();
+
+			List<Seller> list = new ArrayList<>();
+			Map<Integer, Department> map = new HashMap<>();
+
+			while (rs.next()) {
+				Department dep = null;
+				dep = map.get(rs.getInt("DepartmentId"));
+
+				if (dep == null) {
+					dep = instantiateDep(rs);
+					map.put(rs.getInt("DepartmentId"), dep);
+				}
+				Seller obj = instantiateSeller(rs, dep);
+				list.add(obj);
+			}
+
+			return list;
+
+		} catch (SQLException e) {
+			throw new dbException(e.getMessage());
+		} finally {
+			DB.closeRs(rs);
+			DB.closeSt(st);
+		}
 	}
 
 	@Override
@@ -106,10 +138,11 @@ public class SellerDaoJDBC implements SellerDao {
 		ResultSet rs = null;
 
 		try {
-			String sql = "select seller.*, " + "department.name as DepName " + "from seller " + "inner join department "
-					+ "on seller.DepartmentId = department.Id  " + "where DepartmentId = ? order by name";
+			String sql = "select seller.*, department.name as DepName from seller inner join department "
+					+ "on seller.DepartmentId = department.Id where DepartmentId = ? order by name";
 
 			st = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
 			st.setInt(1, department.getId());
 
 			rs = st.executeQuery();
@@ -118,8 +151,8 @@ public class SellerDaoJDBC implements SellerDao {
 			Map<Integer, Department> map = new HashMap<>();
 
 			while (rs.next()) {
-
-				Department dep = map.get(rs.getInt("DepartmentId"));
+				Department dep = null;
+				dep = map.get(rs.getInt("DepartmentId"));
 
 				if (dep == null) {
 					dep = instantiateDep(rs);
